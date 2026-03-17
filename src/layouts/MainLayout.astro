@@ -44,9 +44,6 @@ const props = Astro.props;
       </div>
     </div>
   </div>
-
-  <!-- 新增：Live2D 看板娘脚本（放在 Base 布局内，body 末尾） -->
-  <script src="/live2d-widget/autoload.js" defer></script>
 </Base>
 
 <style>
@@ -63,11 +60,69 @@ const props = Astro.props;
     @apply xl:w-[calc(var(--page-width-xl)-264px)];
   }
 
-  /* 可选：调整看板娘样式，避免遮挡页面内容 */
+  /* 看板娘样式：确保在最上层，不被遮挡 */
   #waifu {
-    z-index: 9999 !important; /* 确保在最上层 */
+    z-index: 9999 !important;
     bottom: 20px !important;
     right: 20px !important;
-    pointer-events: auto !important; /* 允许交互 */
+    pointer-events: auto !important;
   }
 </style>
+
+<!-- 核心：Live2D 看板娘完整加载逻辑（直接写在布局里，彻底避开路径问题） -->
+<script is:inline>
+// 等待页面完全加载后执行
+window.addEventListener("DOMContentLoaded", function() {
+  // 你的本地模型路径
+  const modelPath = "/live2d-widget/model/";
+  const defaultModel = "xch001_01";
+
+  // 按顺序加载资源：样式 → Live2D SDK → 看板娘脚本 → 初始化
+  function loadResource(url, type, callback) {
+    let elem;
+    if (type === "css") {
+      elem = document.createElement("link");
+      elem.rel = "stylesheet";
+      elem.href = url;
+    } else if (type === "js") {
+      elem = document.createElement("script");
+      elem.src = url;
+      elem.async = false; // 强制按顺序加载
+    }
+    elem.onload = callback;
+    document.head.appendChild(elem);
+  }
+
+  // 1. 加载样式
+  loadResource(
+    "https://fastly.jsdelivr.net/npm/live2d-widget@3.1.4/dist/waifu.css",
+    "css",
+    function() {
+      // 2. 加载 Live2D 核心 SDK
+      loadResource(
+        "https://fastly.jsdelivr.net/npm/live2d-widget@3.1.4/lib/live2d.min.js",
+        "js",
+        function() {
+          // 3. 加载看板娘核心脚本
+          loadResource(
+            "https://fastly.jsdelivr.net/npm/live2d-widget@3.1.4/dist/waifu-tips.js",
+            "js",
+            function() {
+              // 4. 初始化看板娘（指向你的本地模型）
+              console.log("开始初始化 Live2D 看板娘");
+              window.initWidget({
+                waifuPath: "https://fastly.jsdelivr.net/npm/live2d-widget@3.1.4/dist/waifu-tips.json",
+                modelPath: modelPath,
+                defaultModel: defaultModel,
+                tools: ["hitokoto", "switch-model", "photo", "quit"],
+                drag: true,
+                logLevel: "error"
+              });
+            }
+          );
+        }
+      );
+    }
+  );
+});
+</script>
