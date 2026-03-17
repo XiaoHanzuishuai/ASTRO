@@ -1,69 +1,39 @@
 /*!
- * Live2D Widget
- * https://github.com/stevenjoezhang/live2d-widget
+ * Live2D Widget 兼容 Astro 版本
  */
+(function() {
+  // 本地模型路径（适配你的 public/live2d-widget/model/）
+  const live2d_path = "/live2d-widget/";
+  const model_name = "xch001_01";
 
-// 指向 Cloudflare 部署后的本地根路径（适配你的 live2d-widget 文件夹）
-const live2d_path = "/live2d-widget/";
+  // 加载核心样式
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = live2d_path + 'waifu.css';
+  document.head.appendChild(link);
 
-// 封装异步加载资源的方法（无需修改）
-function loadExternalResource(url, type) {
-  return new Promise((resolve, reject) => {
-    let tag;
+  // 加载 Live2D 核心 SDK 和看板娘脚本（用 CDN 避免兼容问题）
+  function loadScript(url, callback) {
+    const script = document.createElement('script');
+    script.src = url;
+    script.onload = callback;
+    document.body.appendChild(script);
+  }
 
-    if (type === 'css') {
-      tag = document.createElement('link');
-      tag.rel = 'stylesheet';
-      tag.href = url;
-    }
-    else if (type === 'js') {
-      tag = document.createElement('script');
-      tag.type = 'module';
-      tag.src = url;
-    }
-    if (tag) {
-      tag.onload = () => resolve(url);
-      tag.onerror = () => reject(url);
-      document.head.appendChild(tag);
-    }
-  });
-}
-
-(async () => {
-  // 保留移动端加载（如需关闭，取消下面注释）
-  // if (screen.width < 768) return;
-
-  // 避免图片跨域问题（无需修改）
-  const OriginalImage = window.Image;
-  window.Image = function(...args) {
-    const img = new OriginalImage(...args);
-    img.crossOrigin = "anonymous";
-    return img;
-  };
-  window.Image.prototype = OriginalImage.prototype;
-
-  // 加载本地样式和提示脚本
-  await Promise.all([
-    loadExternalResource(live2d_path + 'waifu.css', 'css'),
-    loadExternalResource(live2d_path + 'waifu-tips.js', 'js')
-  ]);
-
-  // 核心配置：适配你的 model/xch001_01 模型路径
-  initWidget({
-    waifuPath: live2d_path + 'waifu-tips.json',
-    cubism2Path: live2d_path + 'live2d.min.js',
-    cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
-    // 关键：指向你的 model 目录 + 模型文件夹名
-    modelPath: live2d_path + 'model/', // 对应 public/live2d-widget/model/
-    defaultModel: 'xch001_01', // 对应 model 下的 xch001_01 文件夹
-    // 工具栏配置（保留常用功能）
-    tools: ['hitokoto', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'],
-    logLevel: 'warn',
-    drag: true, // 允许拖动看板娘
-    // 额外配置：解决跨域/加载问题
-    loadTimeout: 10000, // 延长加载超时时间
-    debug: false // 关闭调试模式（减少报错干扰）
+  // 先加载 Live2D 核心，再初始化看板娘
+  loadScript('https://fastly.jsdelivr.net/npm/live2d-widgets@1.0.0-rc.6/dist/live2d.min.js', function() {
+    loadScript('https://fastly.jsdelivr.net/npm/live2d-widgets@1.0.0-rc.6/dist/waifu-tips.js', function() {
+      // 初始化看板娘，指向本地模型
+      window.initWidget({
+        waifuPath: live2d_path + 'waifu-tips.json',
+        modelPath: live2d_path + 'model/',
+        defaultModel: model_name,
+        cubism2Path: live2d_path + 'live2d.min.js',
+        cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
+        tools: ['hitokoto', 'switch-model', 'photo', 'quit'],
+        drag: true,
+        logLevel: 'error'
+      });
+    });
   });
 })();
-
-console.log(`\n%cLive2D%cWidget%c\n`, 'padding: 8px; background: #cd3e45; font-weight: bold; font-size: large; color: white;', 'padding: 8px; background: #ff5450; font-size: large; color: #eee;', '');
