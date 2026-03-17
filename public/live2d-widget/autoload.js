@@ -3,8 +3,8 @@
  * https://github.com/stevenjoezhang/live2d-widget
  */
 
-// 关键修改：指向 Cloudflare 部署后的本地路径（适配你的文件夹名）
-const live2d_path = "/live2d-widget/"; // 对应 public/live2d-widget/ 目录
+// 指向 Cloudflare 部署后的本地根路径（适配你的 live2d-widget 文件夹）
+const live2d_path = "/live2d-widget/";
 
 // 封装异步加载资源的方法（无需修改）
 function loadExternalResource(url, type) {
@@ -33,7 +33,7 @@ function loadExternalResource(url, type) {
   // 保留移动端加载（如需关闭，取消下面注释）
   // if (screen.width < 768) return;
 
-  // 避免图片跨域（无需修改）
+  // 避免图片跨域问题（无需修改）
   const OriginalImage = window.Image;
   window.Image = function(...args) {
     const img = new OriginalImage(...args);
@@ -42,24 +42,27 @@ function loadExternalResource(url, type) {
   };
   window.Image.prototype = OriginalImage.prototype;
 
-  // 加载本地的样式和提示脚本
+  // 加载本地样式和提示脚本
   await Promise.all([
     loadExternalResource(live2d_path + 'waifu.css', 'css'),
     loadExternalResource(live2d_path + 'waifu-tips.js', 'js')
   ]);
 
-  // 核心配置：加载你自己的模型
+  // 核心配置：适配你的 model/xch001_01 模型路径
   initWidget({
-    waifuPath: live2d_path + 'waifu-tips.json', // 本地台词文件
-    cubism2Path: live2d_path + 'live2d.min.js', // 本地 Live2D 核心文件
-    cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js', // 公共 CDN
-    // 关键：指定你自己的模型路径（替换成你的模型文件夹名，比如 xch001_01）
-    modelPath: live2d_path + 'xch001_01/', // 模型文件夹路径
-    defaultModel: 'xch001_01', // 模型名称（和文件夹名一致）
+    waifuPath: live2d_path + 'waifu-tips.json',
+    cubism2Path: live2d_path + 'live2d.min.js',
+    cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
+    // 关键：指向你的 model 目录 + 模型文件夹名
+    modelPath: live2d_path + 'model/', // 对应 public/live2d-widget/model/
+    defaultModel: 'xch001_01', // 对应 model 下的 xch001_01 文件夹
     // 工具栏配置（保留常用功能）
     tools: ['hitokoto', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'],
     logLevel: 'warn',
     drag: true, // 允许拖动看板娘
+    // 额外配置：解决跨域/加载问题
+    loadTimeout: 10000, // 延长加载超时时间
+    debug: false // 关闭调试模式（减少报错干扰）
   });
 })();
 
