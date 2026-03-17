@@ -1,53 +1,128 @@
+---
+import Base from "./BaseLayout.astro";
+import NavBar from "../components/NavBar.astro";
+import Banner from "../components/Banner.astro";
+
+import YukinaConfig from "../../yukina.config";
+import Footer from "../components/Footer.astro";
+import SideBar from "../components/SideBar.astro";
+
+export interface Props {
+  title?: string;
+  subTitle?: string;
+  bannerImage?: string;
+  slug?: string;
+}
+
+const props = Astro.props;
+---
+
+<Base>
+  <NavBar />
+
+  {
+    YukinaConfig.bannerStyle == "LOOP" && (
+      <Banner
+        title={props.title}
+        subTitle={props.subTitle}
+        bannerImage={props.bannerImage}
+        slug={props.slug}
+      />
+    )
+  }
+
+  <div class="main-container my-10">
+    <div class="flex flex-row items-start xl:space-x-4">
+      <div class="side-bar">
+        <SideBar />
+      </div>
+      <div class="transition-leaving w-full space-y-8">
+        <main class="content onload-animation">
+          <slot />
+        </main>
+        <Footer />
+      </div>
+    </div>
+  </div>
+</Base>
+
+<style>
+  .main-container {
+    @apply w-full md:min-w-[80%] md:max-w-[80%] lg:min-w-[var(--page-width-lg)] lg:max-w-[var(--page-width-lg)] xl:min-w-[var(--page-width-xl)] xl:max-w-[var(--page-width-xl)];
+    @apply md:mx-auto;
+  }
+
+  .side-bar {
+    @apply hidden min-w-[248px] xl:block;
+  }
+
+  .content {
+    @apply xl:w-[calc(var(--page-width-xl)-264px)];
+  }
+
+  /* 看板娘样式：确保在最上层，不被遮挡 */
+  #waifu {
+    z-index: 9999 !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    pointer-events: auto !important;
+  }
+</style>
+
+<!-- 核心：Live2D 看板娘完整加载逻辑（直接写在布局里，彻底避开路径问题） -->
 <script is:inline>
 // 等待页面完全加载后执行
 window.addEventListener("DOMContentLoaded", function() {
-  console.log("✅ 页面加载完成，开始初始化 Live2D 看板娘");
+  // 你的本地模型路径
+  const modelPath = "/live2d-widget/model/";
+  const defaultModel = "xch001_01";
 
-  // 通用资源加载函数
+  // 按顺序加载资源：样式 → Live2D SDK → 看板娘脚本 → 初始化
   function loadResource(url, type, callback) {
-    const elem = type === "css"
-      ? Object.assign(document.createElement("link"), { rel: "stylesheet", href: url })
-      : Object.assign(document.createElement("script"), { src: url, async: false });
-    
-    elem.onload = () => {
-      console.log(`✅ 加载成功: ${url}`);
-      callback();
-    };
-    elem.onerror = (e) => console.error(`❌ 加载失败: ${url}`, e);
+    let elem;
+    if (type === "css") {
+      elem = document.createElement("link");
+      elem.rel = "stylesheet";
+      elem.href = url;
+    } else if (type === "js") {
+      elem = document.createElement("script");
+      elem.src = url;
+      elem.async = false; // 强制按顺序加载
+    }
+    elem.onload = callback;
     document.head.appendChild(elem);
   }
 
-  // 按顺序加载资源并初始化
+  // 1. 加载样式
   loadResource(
     "https://fastly.jsdelivr.net/npm/live2d-widget@3.1.4/dist/waifu.css",
     "css",
-    () => loadResource(
-      "https://fastly.jsdelivr.net/npm/live2d-widget@3.1.4/lib/live2d.min.js",
-      "js",
-      () => loadResource(
-        "https://fastly.jsdelivr.net/npm/live2d-widget@3.1.4/dist/waifu-tips.js",
+    function() {
+      // 2. 加载 Live2D 核心 SDK
+      loadResource(
+        "https://fastly.jsdelivr.net/npm/live2d-widget@3.1.4/lib/live2d.min.js",
         "js",
-        () => {
-          console.log("🚀 初始化看板娘");
-          window.initWidget({
-            // 提示语配置
-            waifuPath: "https://fastly.jsdelivr.net/npm/live2d-widget@3.1.4/dist/waifu-tips.json",
-            // 模型API（先用官方稳定在线模型，确保能正常显示）
-            apiPath: "https://live2d.fghrsh.net/api/",
-            // 等看板娘正常显示后，取消下面的注释，替换成你的本地模型
-            // modelPath: "/live2d-widget/model/xch001_01/",
-            // 工具栏配置
-            tools: ["hitokoto", "switch-model", "photo", "quit"],
-            // 可拖拽
-            drag: true,
-            // 开启调试日志，方便排查问题
-            logLevel: "debug",
-            // 延长加载超时时间
-            loadTimeout: 20000
-          });
+        function() {
+          // 3. 加载看板娘核心脚本
+          loadResource(
+            "https://fastly.jsdelivr.net/npm/live2d-widget@3.1.4/dist/waifu-tips.js",
+            "js",
+            function() {
+              // 4. 初始化看板娘（指向你的本地模型）
+              console.log("开始初始化 Live2D 看板娘");
+              window.initWidget({
+                waifuPath: "https://fastly.jsdelivr.net/npm/live2d-widget@3.1.4/dist/waifu-tips.json",
+                modelPath: modelPath,
+                defaultModel: defaultModel,
+                tools: ["hitokoto", "switch-model", "photo", "quit"],
+                drag: true,
+                logLevel: "error"
+              });
+            }
+          );
         }
-      )
-    )
+      );
+    }
   );
 });
 </script>
